@@ -77,19 +77,23 @@ contract PegMonitorReactive is IReactive, AbstractReactive {
         DESTINATION_CHAIN_ID = _destinationChainId;
         HOOK_ADDRESS = _hookAddress;
         CALLBACK_ADDRESS = _callbackAddress;
+    }
 
-        // Subscribe to RebalanceNeeded events from the hook on the origin chain
-        // Only runs on Reactive Network (not in ReactVM)
-        if (!vm) {
-            service.subscribe(
-                _originChainId,
-                _hookAddress,
-                PegGuardianTopics.REBALANCE_NEEDED_TOPIC_0,
-                REACTIVE_IGNORE,
-                REACTIVE_IGNORE,
-                REACTIVE_IGNORE
-            );
-        }
+    // =========================================================================
+    // Subscription
+    // =========================================================================
+
+    /// @notice Subscribes to RebalanceNeeded events from the hook on the origin chain
+    /// @dev Must be called manually after deployment to avoid Forge simulation issues with `subscribe()`
+    function subscribeToEvents() external rnOnly {
+        service.subscribe(
+            ORIGIN_CHAIN_ID,
+            HOOK_ADDRESS,
+            PegGuardianTopics.REBALANCE_NEEDED_TOPIC_0,
+            REACTIVE_IGNORE,
+            REACTIVE_IGNORE,
+            REACTIVE_IGNORE
+        );
     }
 
     // =========================================================================

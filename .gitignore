@@ -12,4 +12,4 @@ lib/reactive-lib
 docs/
 
 # Dotenv file
-.env
+.env*

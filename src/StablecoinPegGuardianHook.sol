@@ -10,6 +10,7 @@ import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/types/BeforeSwapD
 import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/types/BalanceDelta.sol";
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {SwapParams, ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
+import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 
 /// @title Stablecoin Peg Guardian Hook
 /// @notice A Uniswap v4 hook that protects stablecoin pools with dynamic fees,
@@ -37,6 +38,12 @@ contract StablecoinPegGuardianHook is BaseHook {
     error InvalidPrice();
     /// @notice Thrown when an unauthorized address calls updatePriceFromCallback
     error NotAuthorizedCallback();
+    /// @notice Thrown when the Chainlink oracle returns stale data
+    error StaleOracleData();
+    /// @notice Thrown when the Chainlink oracle returns a non-positive price
+    error InvalidOraclePrice();
+    /// @notice Thrown when no Chainlink oracle is configured
+    error OracleNotSet();
 
     // =========================================================================
     // Events
@@ -114,6 +121,21 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @param newCallback The new callback address
     event AuthorizedCallbackUpdated(address oldCallback, address newCallback);
 
+    /// @notice Emitted when the price is updated from a Chainlink oracle
+    /// @param oldPrice The previous price
+    /// @param newPrice The new oracle price
+    /// @param roundId The Chainlink round ID
+    event OraclePriceUpdated(
+        uint256 oldPrice,
+        uint256 newPrice,
+        uint80 roundId
+    );
+
+    /// @notice Emitted when the Chainlink oracle configuration is changed
+    /// @param oracle The new oracle address
+    /// @param stalenessThreshold The max acceptable data age in seconds
+    event ChainlinkOracleUpdated(address oracle, uint256 stalenessThreshold);
+
     // =========================================================================
     // Constants
     // =========================================================================
@@ -166,6 +188,15 @@ contract StablecoinPegGuardianHook is BaseHook {
 
     /// @notice Authorized callback contract for cross-chain price updates
     address public authorizedCallback;
+
+    /// @notice Chainlink price feed oracle
+    AggregatorV3Interface public chainlinkOracle;
+
+    /// @notice Maximum acceptable age of Chainlink data (in seconds)
+    uint256 public oracleStalenessThreshold;
+
+    /// @notice Number of decimals the Chainlink feed uses
+    uint8 public oracleDecimals;
 
     // =========================================================================
     // Modifiers
@@ -301,7 +332,7 @@ contract StablecoinPegGuardianHook is BaseHook {
         uint24 feeWithFlag = fee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
         // Emit swap event (poolId calculated here for gas, can be optimized later)
-        emit SwapExecuted(key.toId(), tx.origin, fee, deviationBps);
+        emit SwapExecuted(key.toId(), msg.sender, fee, deviationBps);
 
         return (
             BaseHook.beforeSwap.selector,
@@ -387,6 +418,58 @@ contract StablecoinPegGuardianHook is BaseHook {
         address old = authorizedCallback;
         authorizedCallback = _callback;
         emit AuthorizedCallbackUpdated(old, _callback);
+    }
+
+    /// @notice Configure the Chainlink price feed oracle
+    /// @param _oracle Address of the Chainlink AggregatorV3 price feed
+    /// @param _stalenessThreshold Maximum acceptable age of data in seconds (e.g., 3600 = 1 hour)
+    function setChainlinkOracle(
+        address _oracle,
+        uint256 _stalenessThreshold
+    ) external onlyOwner {
+        if (_oracle == address(0)) revert ZeroAddress();
+        chainlinkOracle = AggregatorV3Interface(_oracle);
+        oracleStalenessThreshold = _stalenessThreshold;
+        oracleDecimals = AggregatorV3Interface(_oracle).decimals();
+        emit ChainlinkOracleUpdated(_oracle, _stalenessThreshold);
+    }
+
+    /// @notice Update the current price from the configured Chainlink oracle
+    /// @dev Can be called by anyone — permissionless price refresh.
+    ///      Validates staleness and positivity of the oracle data.
+    function updatePriceFromOracle() external {
+        if (address(chainlinkOracle) == address(0)) revert OracleNotSet();
+
+        (uint80 roundId, int256 answer, , uint256 updatedAt, ) = chainlinkOracle
+            .latestRoundData();
+
+        // Validate oracle data
+        if (answer <= 0) revert InvalidOraclePrice();
+        if (
+            oracleStalenessThreshold > 0 &&
+            block.timestamp - updatedAt > oracleStalenessThreshold
+        ) revert StaleOracleData();
+
+        // Normalize oracle price to 18 decimals (PRICE_PRECISION)
+        // Chainlink feeds typically use 8 decimals for USD pairs
+        uint256 newPrice;
+        if (oracleDecimals < 18) {
+            // answer is checked to be positive above, so uint256 cast is safe
+            // forge-lint: disable-next-line(unsafe-typecast)
+            newPrice = uint256(answer) * 10 ** (18 - oracleDecimals);
+        } else if (oracleDecimals > 18) {
+            // answer is checked to be positive above, so uint256 cast is safe
+            // forge-lint: disable-next-line(unsafe-typecast)
+            newPrice = uint256(answer) / 10 ** (oracleDecimals - 18);
+        } else {
+            // answer is checked to be positive above, so uint256 cast is safe
+            // forge-lint: disable-next-line(unsafe-typecast)
+            newPrice = uint256(answer);
+        }
+
+        uint256 oldPrice = currentPrice;
+        currentPrice = newPrice;
+        emit OraclePriceUpdated(oldPrice, newPrice, roundId);
     }
 
     /// @notice Update the price from an authorized cross-chain callback
