@@ -20,16 +20,10 @@ contract PegGuardianCallbackTest is Test, Deployers {
         deployFreshManagerAndRouters();
 
         // Deploy hook to flag-encoded address
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
 
@@ -56,22 +50,14 @@ contract PegGuardianCallbackTest is Test, Deployers {
     function test_callbackEmitsPegProtectionExecuted() public {
         vm.prank(reactiveSystem);
         vm.expectEmit(true, false, false, true);
-        emit PegGuardianCallback.PegProtectionExecuted(
-            address(hook),
-            0.99e18,
-            100
-        );
+        emit PegGuardianCallback.PegProtectionExecuted(address(hook), 0.99e18, 100);
         callback.handleRebalance(address(0), 0.99e18, 100);
     }
 
     function test_callbackEmitsCallbackPriceUpdatedOnHook() public {
         vm.prank(reactiveSystem);
         vm.expectEmit(false, false, false, true);
-        emit StablecoinPegGuardianHook.CallbackPriceUpdated(
-            1e18,
-            0.995e18,
-            address(callback)
-        );
+        emit StablecoinPegGuardianHook.CallbackPriceUpdated(1e18, 0.995e18, address(callback));
         callback.handleRebalance(address(0), 0.995e18, 50);
     }
 
@@ -89,9 +75,7 @@ contract PegGuardianCallbackTest is Test, Deployers {
     function test_hookRevertsIfNotAuthorizedCallback() public {
         // Direct call to updatePriceFromCallback from non-callback address
         vm.prank(alice);
-        vm.expectRevert(
-            StablecoinPegGuardianHook.NotAuthorizedCallback.selector
-        );
+        vm.expectRevert(StablecoinPegGuardianHook.NotAuthorizedCallback.selector);
         hook.updatePriceFromCallback(0.99e18);
     }
 
@@ -115,10 +99,7 @@ contract PegGuardianCallbackTest is Test, Deployers {
     function test_setAuthorizedCallbackEmitsEvent() public {
         address newCallback = makeAddr("newCallback");
         vm.expectEmit(false, false, false, true);
-        emit StablecoinPegGuardianHook.AuthorizedCallbackUpdated(
-            address(callback),
-            newCallback
-        );
+        emit StablecoinPegGuardianHook.AuthorizedCallbackUpdated(address(callback), newCallback);
         hook.setAuthorizedCallback(newCallback);
     }
 
@@ -137,8 +118,8 @@ contract PegGuardianCallbackTest is Test, Deployers {
         callback.handleRebalance(address(0), 0.995e18, 50);
         assertEq(hook.currentPrice(), 0.995e18);
 
-        callback.handleRebalance(address(0), 0.990e18, 100);
-        assertEq(hook.currentPrice(), 0.990e18);
+        callback.handleRebalance(address(0), 0.99e18, 100);
+        assertEq(hook.currentPrice(), 0.99e18);
 
         callback.handleRebalance(address(0), 1.001e18, 10);
         assertEq(hook.currentPrice(), 1.001e18);

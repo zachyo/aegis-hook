@@ -20,17 +20,11 @@ contract StablecoinPegGuardianHookGasTest is Test, Deployers {
     function setUp() public {
         deployFreshManagerAndRouters();
 
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
     }
@@ -119,11 +113,7 @@ contract StablecoinPegGuardianHookGasTest is Test, Deployers {
         console2.log("acceptOwnership gas:", gasAccept);
         console2.log("Total ownership transfer gas:", gasTransfer + gasAccept);
 
-        assertLt(
-            gasTransfer + gasAccept,
-            100_000,
-            "Full ownership transfer exceeds 100k gas"
-        );
+        assertLt(gasTransfer + gasAccept, 100_000, "Full ownership transfer exceeds 100k gas");
     }
 
     // =========================================================================

@@ -54,22 +54,13 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @param sender The address that initiated the swap
     /// @param fee The dynamic fee applied (in hundredths of a bip)
     /// @param deviationBps The peg deviation in basis points at time of swap
-    event SwapExecuted(
-        PoolId indexed poolId,
-        address indexed sender,
-        uint24 fee,
-        uint256 deviationBps
-    );
+    event SwapExecuted(PoolId indexed poolId, address indexed sender, uint24 fee, uint256 deviationBps);
 
     /// @notice Emitted when peg deviation exceeds the critical threshold after a swap
     /// @param poolId The pool that triggered the rebalance signal
     /// @param deviationBps The peg deviation in basis points
     /// @param currentPrice The current oracle price
-    event RebalanceNeeded(
-        PoolId indexed poolId,
-        uint256 deviationBps,
-        uint256 currentPrice
-    );
+    event RebalanceNeeded(PoolId indexed poolId, uint256 deviationBps, uint256 currentPrice);
 
     /// @notice Emitted when liquidity is added to a guarded pool
     /// @param poolId The pool receiving liquidity
@@ -97,10 +88,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @notice Emitted when ownership is transferred
     /// @param previousOwner The previous owner
     /// @param newOwner The new owner
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /// @notice Emitted when a new pending owner is set
     /// @param pendingOwner The address of the pending owner
@@ -110,11 +98,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @param oldPrice The previous price
     /// @param newPrice The new price from the callback
     /// @param caller The callback contract that triggered the update
-    event CallbackPriceUpdated(
-        uint256 oldPrice,
-        uint256 newPrice,
-        address caller
-    );
+    event CallbackPriceUpdated(uint256 oldPrice, uint256 newPrice, address caller);
 
     /// @notice Emitted when the authorized callback address is changed
     /// @param oldCallback The previous callback address
@@ -125,11 +109,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @param oldPrice The previous price
     /// @param newPrice The new oracle price
     /// @param roundId The Chainlink round ID
-    event OraclePriceUpdated(
-        uint256 oldPrice,
-        uint256 newPrice,
-        uint80 roundId
-    );
+    event OraclePriceUpdated(uint256 oldPrice, uint256 newPrice, uint80 roundId);
 
     /// @notice Emitted when the Chainlink oracle configuration is changed
     /// @param oracle The new oracle address
@@ -229,10 +209,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @notice Deploys the hook and sets initial owner + peg price
     /// @param _poolManager The Uniswap v4 PoolManager
     /// @param _owner The initial owner of the hook
-    constructor(
-        IPoolManager _poolManager,
-        address _owner
-    ) BaseHook(_poolManager) {
+    constructor(IPoolManager _poolManager, address _owner) BaseHook(_poolManager) {
         if (_owner == address(0)) revert ZeroAddress();
         owner = _owner;
         pegPrice = PRICE_PRECISION; // default peg = $1.00
@@ -245,29 +222,23 @@ contract StablecoinPegGuardianHook is BaseHook {
     // =========================================================================
 
     /// @inheritdoc BaseHook
-    function getHookPermissions()
-        public
-        pure
-        override
-        returns (Hooks.Permissions memory)
-    {
-        return
-            Hooks.Permissions({
-                beforeInitialize: false,
-                afterInitialize: false,
-                beforeAddLiquidity: true,
-                afterAddLiquidity: false,
-                beforeRemoveLiquidity: false,
-                afterRemoveLiquidity: false,
-                beforeSwap: true,
-                afterSwap: true,
-                beforeDonate: false,
-                afterDonate: false,
-                beforeSwapReturnDelta: false,
-                afterSwapReturnDelta: false,
-                afterAddLiquidityReturnDelta: false,
-                afterRemoveLiquidityReturnDelta: false
-            });
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        return Hooks.Permissions({
+            beforeInitialize: false,
+            afterInitialize: false,
+            beforeAddLiquidity: true,
+            afterAddLiquidity: false,
+            beforeRemoveLiquidity: false,
+            afterRemoveLiquidity: false,
+            beforeSwap: true,
+            afterSwap: true,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: false,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
     }
 
     // =========================================================================
@@ -276,12 +247,12 @@ contract StablecoinPegGuardianHook is BaseHook {
 
     /// @notice Gate liquidity additions when paused and emit tracking event
     /// @dev Called by PoolManager before liquidity is added
-    function _beforeAddLiquidity(
-        address sender,
-        PoolKey calldata key,
-        ModifyLiquidityParams calldata,
-        bytes calldata
-    ) internal override whenNotPaused returns (bytes4) {
+    function _beforeAddLiquidity(address sender, PoolKey calldata key, ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        override
+        whenNotPaused
+        returns (bytes4)
+    {
         emit LiquidityAdded(key.toId(), sender);
         return BaseHook.beforeAddLiquidity.selector;
     }
@@ -290,12 +261,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @dev Fee scales linearly from 0 to MAX_FEE as deviation goes from 0% to 1%.
     ///      Large-cap orders (>$100k) receive an additional surcharge.
     ///      The fee is returned with OVERRIDE_FEE_FLAG so the PoolManager applies it.
-    function _beforeSwap(
-        address,
-        PoolKey calldata key,
-        SwapParams calldata params,
-        bytes calldata
-    )
+    function _beforeSwap(address, PoolKey calldata key, SwapParams calldata params, bytes calldata)
         internal
         override
         whenNotPaused
@@ -334,23 +300,17 @@ contract StablecoinPegGuardianHook is BaseHook {
         // Emit swap event (poolId calculated here for gas, can be optimized later)
         emit SwapExecuted(key.toId(), msg.sender, fee, deviationBps);
 
-        return (
-            BaseHook.beforeSwap.selector,
-            BeforeSwapDeltaLibrary.ZERO_DELTA,
-            feeWithFlag
-        );
+        return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, feeWithFlag);
     }
 
     /// @notice Post-swap monitoring: detect critical peg deviations and signal rebalance
     /// @dev Emits RebalanceNeeded when deviation exceeds CRITICAL_DEVIATION_BPS.
     ///      Phase 3 will replace this with Reactive cross-chain callbacks.
-    function _afterSwap(
-        address,
-        PoolKey calldata key,
-        SwapParams calldata,
-        BalanceDelta,
-        bytes calldata
-    ) internal override returns (bytes4, int128) {
+    function _afterSwap(address, PoolKey calldata key, SwapParams calldata, BalanceDelta, bytes calldata)
+        internal
+        override
+        returns (bytes4, int128)
+    {
         uint256 deviationBps = _calculateDeviationBps();
 
         if (deviationBps >= CRITICAL_DEVIATION_BPS) {
@@ -423,10 +383,7 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @notice Configure the Chainlink price feed oracle
     /// @param _oracle Address of the Chainlink AggregatorV3 price feed
     /// @param _stalenessThreshold Maximum acceptable age of data in seconds (e.g., 3600 = 1 hour)
-    function setChainlinkOracle(
-        address _oracle,
-        uint256 _stalenessThreshold
-    ) external onlyOwner {
+    function setChainlinkOracle(address _oracle, uint256 _stalenessThreshold) external onlyOwner {
         if (_oracle == address(0)) revert ZeroAddress();
         chainlinkOracle = AggregatorV3Interface(_oracle);
         oracleStalenessThreshold = _stalenessThreshold;
@@ -440,15 +397,13 @@ contract StablecoinPegGuardianHook is BaseHook {
     function updatePriceFromOracle() external {
         if (address(chainlinkOracle) == address(0)) revert OracleNotSet();
 
-        (uint80 roundId, int256 answer, , uint256 updatedAt, ) = chainlinkOracle
-            .latestRoundData();
+        (uint80 roundId, int256 answer,, uint256 updatedAt,) = chainlinkOracle.latestRoundData();
 
         // Validate oracle data
         if (answer <= 0) revert InvalidOraclePrice();
-        if (
-            oracleStalenessThreshold > 0 &&
-            block.timestamp - updatedAt > oracleStalenessThreshold
-        ) revert StaleOracleData();
+        if (oracleStalenessThreshold > 0 && block.timestamp - updatedAt > oracleStalenessThreshold) {
+            revert StaleOracleData();
+        }
 
         // Normalize oracle price to 18 decimals (PRICE_PRECISION)
         // Chainlink feeds typically use 8 decimals for USD pairs

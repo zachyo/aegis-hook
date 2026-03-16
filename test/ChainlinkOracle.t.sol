@@ -36,18 +36,10 @@ contract MockChainlinkFeed {
         return 4;
     }
 
-    function getRoundData(
-        uint80
-    )
+    function getRoundData(uint80)
         external
         view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         return (_roundId, _answer, _updatedAt, _updatedAt, _roundId);
     }
@@ -55,13 +47,7 @@ contract MockChainlinkFeed {
     function latestRoundData()
         external
         view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         return (_roundId, _answer, _updatedAt, _updatedAt, _roundId);
     }
@@ -75,16 +61,10 @@ contract ChainlinkOracleTest is Test, Deployers {
     function setUp() public {
         deployFreshManagerAndRouters();
 
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
 
@@ -108,10 +88,7 @@ contract ChainlinkOracleTest is Test, Deployers {
 
     function test_setChainlinkOracle_emitsEvent() public {
         vm.expectEmit(false, false, false, true);
-        emit StablecoinPegGuardianHook.ChainlinkOracleUpdated(
-            address(mockFeed),
-            3600
-        );
+        emit StablecoinPegGuardianHook.ChainlinkOracleUpdated(address(mockFeed), 3600);
         hook.setChainlinkOracle(address(mockFeed), 3600);
     }
 

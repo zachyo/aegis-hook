@@ -26,17 +26,11 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
     function setUp() public {
         deployFreshManagerAndRouters();
 
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
 
@@ -138,10 +132,7 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
 
         // Verify it's in the linear region if deviation < MAX_DEVIATION_BPS
         if (actualDeviation < MAX_DEVIATION_BPS) {
-            assertTrue(
-                expectedFee <= MAX_FEE,
-                "Fee in linear region exceeds MAX_FEE"
-            );
+            assertTrue(expectedFee <= MAX_FEE, "Fee in linear region exceeds MAX_FEE");
             // Also verify the linear formula holds exactly
             // actualDeviation is bounded, so uint24 cast is safe
             // forge-lint: disable-next-line(unsafe-typecast)
@@ -154,10 +145,7 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
     // =========================================================================
 
     /// @notice The total fee (deviation fee + surcharge) never exceeds MAX_LP_FEE
-    function testFuzz_feeNeverExceedsMaxLPFee(
-        uint256 price,
-        uint256 swapAmount
-    ) public {
+    function testFuzz_feeNeverExceedsMaxLPFee(uint256 price, uint256 swapAmount) public {
         price = bound(price, 1, 10e18);
         swapAmount = bound(swapAmount, 1, type(uint128).max);
 
@@ -184,10 +172,7 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
             fee = uint24(LPFeeLibrary.MAX_LP_FEE);
         }
 
-        assertTrue(
-            fee <= uint24(LPFeeLibrary.MAX_LP_FEE),
-            "Fee exceeds MAX_LP_FEE after capping"
-        );
+        assertTrue(fee <= uint24(LPFeeLibrary.MAX_LP_FEE), "Fee exceeds MAX_LP_FEE after capping");
     }
 
     // =========================================================================
@@ -201,11 +186,7 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
             hook.updatePrice(newPrice);
         } else {
             hook.updatePrice(newPrice);
-            assertEq(
-                hook.currentPrice(),
-                newPrice,
-                "Price not updated correctly"
-            );
+            assertEq(hook.currentPrice(), newPrice, "Price not updated correctly");
         }
     }
 
@@ -216,11 +197,7 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
             hook.setPegPrice(newPeg);
         } else {
             hook.setPegPrice(newPeg);
-            assertEq(
-                hook.pegPrice(),
-                newPeg,
-                "Peg price not updated correctly"
-            );
+            assertEq(hook.pegPrice(), newPeg, "Peg price not updated correctly");
         }
     }
 
@@ -235,19 +212,12 @@ contract StablecoinPegGuardianHookFuzzTest is Test, Deployers {
             // Authorized callback with valid price → success
             vm.prank(reactiveSystem);
             callback.handleRebalance(address(0), newPrice, 50);
-            assertEq(
-                hook.currentPrice(),
-                newPrice,
-                "Callback price update failed"
-            );
+            assertEq(hook.currentPrice(), newPrice, "Callback price update failed");
         }
     }
 
     /// @notice Unauthorized addresses can never update price via callback
-    function testFuzz_callbackUnauthorized(
-        address caller,
-        uint256 newPrice
-    ) public {
+    function testFuzz_callbackUnauthorized(address caller, uint256 newPrice) public {
         newPrice = bound(newPrice, 1, 10e18);
         vm.assume(caller != reactiveSystem);
         vm.assume(caller != address(0));

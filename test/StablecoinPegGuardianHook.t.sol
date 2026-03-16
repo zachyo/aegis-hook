@@ -19,18 +19,12 @@ contract StablecoinPegGuardianHookTest is Test, Deployers {
         deployFreshManagerAndRouters();
 
         // Compute the hook address flags matching our getHookPermissions()
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         // Deploy the hook to the correct flag-encoded address
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
     }
@@ -235,10 +229,7 @@ contract StablecoinPegGuardianHookTest is Test, Deployers {
 
         vm.prank(alice);
         vm.expectEmit(true, true, false, false);
-        emit StablecoinPegGuardianHook.OwnershipTransferred(
-            address(this),
-            alice
-        );
+        emit StablecoinPegGuardianHook.OwnershipTransferred(address(this), alice);
         hook.acceptOwnership();
     }
 

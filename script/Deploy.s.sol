@@ -46,21 +46,13 @@ contract DeployHook is Script {
         // ---------------------------------------------------------------------
         // Step 1: Mine salt for correct hook address flags
         // ---------------------------------------------------------------------
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         bytes memory constructorArgs = abi.encode(poolManager, deployer);
-        address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+        address create2Deployer = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-        (address hookAddress, bytes32 salt) = HookMiner.find(
-            CREATE2_DEPLOYER,
-            flags,
-            type(StablecoinPegGuardianHook).creationCode,
-            constructorArgs
-        );
+        (address hookAddress, bytes32 salt) =
+            HookMiner.find(create2Deployer, flags, type(StablecoinPegGuardianHook).creationCode, constructorArgs);
 
         console2.log("Mined salt:", uint256(salt));
         console2.log("Hook address:", hookAddress);
@@ -68,9 +60,7 @@ contract DeployHook is Script {
         // ---------------------------------------------------------------------
         // Step 2: Deploy hook via CREATE2
         // ---------------------------------------------------------------------
-        StablecoinPegGuardianHook hook = new StablecoinPegGuardianHook{
-            salt: salt
-        }(IPoolManager(poolManager), deployer);
+        StablecoinPegGuardianHook hook = new StablecoinPegGuardianHook{salt: salt}(IPoolManager(poolManager), deployer);
 
         require(address(hook) == hookAddress, "Deploy: hook address mismatch");
 
@@ -104,9 +94,7 @@ contract DeployHook is Script {
             console2.log("  Token1:", token1);
             console2.log("  TickSpacing: 60");
         } else {
-            console2.log(
-                "Skipping pool init (set TOKEN0 and TOKEN1 env vars to initialize)"
-            );
+            console2.log("Skipping pool init (set TOKEN0 and TOKEN1 env vars to initialize)");
         }
 
         vm.stopBroadcast();

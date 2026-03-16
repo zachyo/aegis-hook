@@ -18,11 +18,7 @@ contract PegGuardianCallback is AbstractCallback {
     /// @param hook Address of the hook that was updated
     /// @param newPrice The new price set on the hook
     /// @param deviationBps The peg deviation that triggered the protection
-    event PegProtectionExecuted(
-        address indexed hook,
-        uint256 newPrice,
-        uint256 deviationBps
-    );
+    event PegProtectionExecuted(address indexed hook, uint256 newPrice, uint256 deviationBps);
 
     // =========================================================================
     // Errors
@@ -45,10 +41,7 @@ contract PegGuardianCallback is AbstractCallback {
     /// @notice Deploy the callback contract
     /// @param _callbackSender Address authorized to send callbacks (Reactive Network system)
     /// @param _hookAddress Address of StablecoinPegGuardianHook on this destination chain
-    constructor(
-        address _callbackSender,
-        address _hookAddress
-    ) payable AbstractCallback(_callbackSender) {
+    constructor(address _callbackSender, address _hookAddress) payable AbstractCallback(_callbackSender) {
         if (_hookAddress == address(0)) revert ZeroAddress();
         HOOK_ADDRESS = _hookAddress;
     }
@@ -63,18 +56,17 @@ contract PegGuardianCallback is AbstractCallback {
     /// @param newPrice The current price detected on the origin chain
     /// @param deviationBps The peg deviation in basis points
     function handleRebalance(
-        address /* sender — unused, filled by Reactive Network */,
+        address,
+        /* sender — unused, filled by Reactive Network */
         uint256 newPrice,
         uint256 deviationBps
-    ) external authorizedSenderOnly {
+    )
+        external
+        authorizedSenderOnly
+    {
         // Call updatePriceFromCallback on the hook
         // This function exists on the hook specifically for authorized callback contracts
-        (bool success, ) = HOOK_ADDRESS.call(
-            abi.encodeWithSignature(
-                "updatePriceFromCallback(uint256)",
-                newPrice
-            )
-        );
+        (bool success,) = HOOK_ADDRESS.call(abi.encodeWithSignature("updatePriceFromCallback(uint256)", newPrice));
         if (!success) revert CallFailed();
 
         emit PegProtectionExecuted(HOOK_ADDRESS, newPrice, deviationBps);

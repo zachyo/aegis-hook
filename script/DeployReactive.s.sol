@@ -28,10 +28,7 @@ contract DeployCallback is Script {
 
         // Reactive Network system address that will send callbacks
         // On Kopli testnet, this is the Reactive system contract
-        address reactiveSystemAddress = vm.envOr(
-            "REACTIVE_SYSTEM_ADDRESS",
-            address(0)
-        );
+        address reactiveSystemAddress = vm.envOr("REACTIVE_SYSTEM_ADDRESS", address(0));
 
         // If not set, use a placeholder — must be updated before production
         if (reactiveSystemAddress == address(0)) {
@@ -49,10 +46,7 @@ contract DeployCallback is Script {
 
         vm.startBroadcast();
 
-        PegGuardianCallback callback = new PegGuardianCallback(
-            reactiveSystemAddress,
-            hookAddress
-        );
+        PegGuardianCallback callback = new PegGuardianCallback(reactiveSystemAddress, hookAddress);
 
         console2.log("Callback deployed at:", address(callback));
         console2.log("\nNext: Set this as authorized callback on the hook:");
@@ -78,10 +72,7 @@ contract DeployReactiveMonitor is Script {
 
         // Allow overriding chain IDs for different deployments
         uint256 originChainId = vm.envOr("ORIGIN_CHAIN_ID", SEPOLIA_CHAIN_ID);
-        uint256 destinationChainId = vm.envOr(
-            "DESTINATION_CHAIN_ID",
-            SEPOLIA_CHAIN_ID
-        );
+        uint256 destinationChainId = vm.envOr("DESTINATION_CHAIN_ID", SEPOLIA_CHAIN_ID);
 
         console2.log("=== PegMonitorReactive Deployment ===");
         console2.log("Origin chain:", originChainId);
@@ -91,12 +82,8 @@ contract DeployReactiveMonitor is Script {
 
         vm.startBroadcast();
 
-        PegMonitorReactive monitor = new PegMonitorReactive{value: 0.02 ether}(
-            originChainId,
-            destinationChainId,
-            hookAddress,
-            callbackAddress
-        );
+        PegMonitorReactive monitor =
+            new PegMonitorReactive{value: 0.02 ether}(originChainId, destinationChainId, hookAddress, callbackAddress);
 
         console2.log("\nReactive monitor deployed at:", address(monitor));
         console2.log("Callback count:", monitor.callbackCount());
@@ -108,12 +95,8 @@ contract DeployReactiveMonitor is Script {
         console2.log("Callback (destination):", callbackAddress);
         console2.log("Monitor (Reactive):", address(monitor));
         console2.log("\n*** IMPORTANT ***");
-        console2.log(
-            "Forge cannot simulate the Reactive system contract for subscriptions."
-        );
-        console2.log(
-            "You MUST manually subscribe to events by running the following command:"
-        );
+        console2.log("Forge cannot simulate the Reactive system contract for subscriptions.");
+        console2.log("You MUST manually subscribe to events by running the following command:");
         console2.log(
             string.concat(
                 "cast send ",

@@ -17,11 +17,7 @@ contract PegMonitorReactive is IReactive, AbstractReactive {
     // =========================================================================
 
     /// @notice Emitted when a cross-chain callback is sent
-    event CallbackSent(
-        uint256 indexed originChainId,
-        uint256 deviationBps,
-        uint256 currentPrice
-    );
+    event CallbackSent(uint256 indexed originChainId, uint256 deviationBps, uint256 currentPrice);
 
     /// @notice Emitted when a protection confirmation is received
     event ProtectionConfirmed(uint256 indexed chainId);
@@ -67,12 +63,8 @@ contract PegMonitorReactive is IReactive, AbstractReactive {
     /// @param _destinationChainId Chain ID where PegGuardianCallback is deployed
     /// @param _hookAddress Address of StablecoinPegGuardianHook on origin chain
     /// @param _callbackAddress Address of PegGuardianCallback on destination chain
-    constructor(
-        uint256 _originChainId,
-        uint256 _destinationChainId,
-        address _hookAddress,
-        address _callbackAddress
-    ) payable {
+    constructor(uint256 _originChainId, uint256 _destinationChainId, address _hookAddress, address _callbackAddress)
+        payable {
         ORIGIN_CHAIN_ID = _originChainId;
         DESTINATION_CHAIN_ID = _destinationChainId;
         HOOK_ADDRESS = _hookAddress;
@@ -110,10 +102,7 @@ contract PegMonitorReactive is IReactive, AbstractReactive {
         if (log._contract != HOOK_ADDRESS) return;
 
         // Decode RebalanceNeeded event data: (uint256 deviationBps, uint256 currentPrice)
-        (uint256 deviationBps, uint256 currentPrice) = abi.decode(
-            log.data,
-            (uint256, uint256)
-        );
+        (uint256 deviationBps, uint256 currentPrice) = abi.decode(log.data, (uint256, uint256));
 
         // Encode the callback payload for PegGuardianCallback.handleRebalance()
         bytes memory payload = abi.encodeWithSignature(
@@ -127,11 +116,6 @@ contract PegMonitorReactive is IReactive, AbstractReactive {
         emit CallbackSent(log.chain_id, deviationBps, currentPrice);
 
         // Emit Callback event to trigger cross-chain execution
-        emit Callback(
-            DESTINATION_CHAIN_ID,
-            CALLBACK_ADDRESS,
-            CALLBACK_GAS_LIMIT,
-            payload
-        );
+        emit Callback(DESTINATION_CHAIN_ID, CALLBACK_ADDRESS, CALLBACK_GAS_LIMIT, payload);
     }
 }
