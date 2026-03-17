@@ -2,9 +2,20 @@
 
 import { WalletConnect } from "@/components/WalletConnect";
 import { AdminPanel } from "@/components/AdminPanel";
-import { useHookState, useRebalanceEvents, useSwapEvents } from "@/hooks/useHook";
+import {
+  useHookState,
+  useRebalanceEvents,
+  useSwapEvents,
+} from "@/hooks/useHook";
 import { useAccount } from "wagmi";
-import { ShieldCheck, Activity, BarChart3, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import {
+  ShieldCheck,
+  Activity,
+  BarChart3,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 
 function formatBps(bps: bigint): string {
   return `${bps.toString()} bps`;
@@ -16,8 +27,16 @@ function shortenAddress(addr: string): string {
 }
 
 function getHealthLabel(bps: bigint): { label: string; className: string } {
-  if (bps === 0n) return { label: "Healthy", className: "text-emerald-600 dark:text-emerald-400" };
-  if (bps < 50n) return { label: "Nominal", className: "text-amber-600 dark:text-amber-400" };
+  if (bps === 0n)
+    return {
+      label: "Healthy",
+      className: "text-emerald-600 dark:text-emerald-400",
+    };
+  if (bps < 50n)
+    return {
+      label: "Nominal",
+      className: "text-amber-600 dark:text-amber-400",
+    };
   return { label: "Critical", className: "text-rose-600 dark:text-rose-400" };
 }
 
@@ -36,7 +55,11 @@ export default function Home() {
 
   const health = getHealthLabel(state.deviationBps);
   const dynamicFee = computeDynamicFee(state.deviationBps);
-  const isOwner = address && state.owner !== "—" && address.toLowerCase() === state.owner.toLowerCase();
+  const isOwner =
+    address &&
+    state.owner !== "—" &&
+    address.toLowerCase() === state.owner.toLowerCase();
+  console.log({ state });
 
   return (
     <div className="min-h-screen flex flex-col items-center p-8 sm:p-20 font-sans">
@@ -76,7 +99,8 @@ export default function Home() {
             Stablecoin Protection Dashboard
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Monitor peg deviation, dynamic fees, and cross-chain reactive interventions for secured stablecoin pools.
+            Monitor peg deviation, dynamic fees, and cross-chain reactive
+            interventions for secured stablecoin pools.
           </p>
         </section>
 
@@ -92,7 +116,9 @@ export default function Home() {
               <span className="text-4xl font-semibold tabular-nums">
                 {state.isLoading ? "…" : state.currentPrice}
               </span>
-              <span className="text-sm font-medium text-muted-foreground">USD</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                USD
+              </span>
             </div>
             <div className={`text-sm font-medium mt-2 ${health.className}`}>
               Deviation: {formatBps(state.deviationBps)} ({health.label})
@@ -109,7 +135,9 @@ export default function Home() {
               <span className="text-4xl font-semibold tabular-nums">
                 {state.isLoading ? "…" : dynamicFee}
               </span>
-              <span className="text-sm font-medium text-muted-foreground">hundredths bps</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                hundredths bps
+              </span>
             </div>
             <div className="text-sm font-medium text-zinc-500 mt-2">
               Peg: {state.pegPrice} USD
@@ -135,7 +163,9 @@ export default function Home() {
 
         {/* ── Recent Activity ─────────────────────────────────────────── */}
         <section className="flex flex-col gap-6 mt-8">
-          <h3 className="text-2xl font-medium tracking-tight">Recent Activity</h3>
+          <h3 className="text-2xl font-medium tracking-tight">
+            Recent Activity
+          </h3>
           <div className="rounded-xl border border-border bg-background overflow-hidden">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted text-muted-foreground">
@@ -149,7 +179,10 @@ export default function Home() {
               <tbody className="divide-y divide-border">
                 {rebalanceEvents.length === 0 && swapEvents.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-8 text-center text-muted-foreground"
+                    >
                       {state.isError
                         ? "Unable to connect. Ensure contracts are deployed and your wallet is connected."
                         : "Listening for events… Connect your wallet and ensure the hook is deployed."}
@@ -170,7 +203,9 @@ export default function Home() {
                   <tr key={`swap-${i}`}>
                     <td className="px-6 py-4 font-medium">Swap Executed</td>
                     <td className="px-6 py-4">{formatBps(evt.deviationBps)}</td>
-                    <td className="px-6 py-4">Fee: {evt.fee} · {shortenAddress(evt.sender)}</td>
+                    <td className="px-6 py-4">
+                      Fee: {evt.fee} · {shortenAddress(evt.sender)}
+                    </td>
                     <td className="px-6 py-4 text-right text-muted-foreground">
                       {new Date(evt.timestamp).toLocaleTimeString()}
                     </td>

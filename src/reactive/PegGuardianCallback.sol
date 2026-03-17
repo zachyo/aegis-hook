@@ -2,6 +2,12 @@
 pragma solidity >=0.8.0;
 
 import {AbstractCallback} from "reactive-lib/abstract-base/AbstractCallback.sol";
+import {PoolKey} from "v4-core/types/PoolKey.sol";
+import {PoolSwapTest} from "v4-core/test/PoolSwapTest.sol";
+import {SwapParams} from "v4-core/types/PoolOperation.sol";
+import {TickMath} from "v4-core/libraries/TickMath.sol";
+import {Currency} from "v4-core/types/Currency.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 /// @title PegGuardianCallback
 /// @notice Destination chain contract that receives cross-chain callbacks from
@@ -33,6 +39,8 @@ contract PegGuardianCallback is AbstractCallback {
 
     /// @notice Address of the StablecoinPegGuardianHook on this chain
     address public immutable HOOK_ADDRESS;
+    address public immutable SWAP_ROUTER;
+    PoolKey public poolKey;
 
     // =========================================================================
     // Constructor
@@ -41,9 +49,22 @@ contract PegGuardianCallback is AbstractCallback {
     /// @notice Deploy the callback contract
     /// @param _callbackSender Address authorized to send callbacks (Reactive Network system)
     /// @param _hookAddress Address of StablecoinPegGuardianHook on this destination chain
-    constructor(address _callbackSender, address _hookAddress) payable AbstractCallback(_callbackSender) {
-        if (_hookAddress == address(0)) revert ZeroAddress();
+    /// @param _swapRouter Address of the PoolSwapTest router to execute protective swaps
+    /// @param _poolKey The Uniswap v4 pool key to protect
+    constructor(
+        address _callbackSender, 
+        address _hookAddress,
+        address _swapRouter,
+        PoolKey memory _poolKey
+    ) payable AbstractCallback(_callbackSender) {
+        if (_hookAddress == address(0) || _swapRouter == address(0)) revert ZeroAddress();
         HOOK_ADDRESS = _hookAddress;
+        SWAP_ROUTER = _swapRouter;
+        poolKey = _poolKey;
+
+        // Infinite approve the router
+        IERC20(Currency.unwrap(_poolKey.currency0)).approve(_swapRouter, type(uint256).max);
+        IERC20(Currency.unwrap(_poolKey.currency1)).approve(_swapRouter, type(uint256).max);
     }
 
     // =========================================================================
@@ -64,10 +85,34 @@ contract PegGuardianCallback is AbstractCallback {
         external
         authorizedSenderOnly
     {
-        // Call updatePriceFromCallback on the hook
-        // This function exists on the hook specifically for authorized callback contracts
+        // 1. Update the oracle price on the hook first
         (bool success,) = HOOK_ADDRESS.call(abi.encodeWithSignature("updatePriceFromCallback(uint256)", newPrice));
         if (!success) revert CallFailed();
+
+        // 2. Execute a protective swap against the pool
+        // If price fell, we assume the stablecoin lost value. If price rose, the stablecoin gained value.
+        // For demonstration, we simply execute a small swap to rebalance.
+        // Assuming Peg is 1e18, if newPrice < 1e18, we swap to buy the stablecoin.
+        
+        bool zeroForOne = newPrice < 1e18; // simplistic logic to determine swap direction
+        // Swap 100 units of the stronger token to buy back the depegged token
+        uint256 swapAmount = 100;
+
+        PoolSwapTest(SWAP_ROUTER).swap(
+            poolKey,
+            SwapParams({
+                zeroForOne: zeroForOne,
+                // casting to 'int256' is safe because swapAmount is smaller than type(int256).max
+                // forge-lint: disable-next-line(unsafe-typecast)
+                amountSpecified: -int256(swapAmount),
+                sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+            }),
+            PoolSwapTest.TestSettings({
+                takeClaims: false,
+                settleUsingBurn: false
+            }),
+            new bytes(0)
+        );
 
         emit PegProtectionExecuted(HOOK_ADDRESS, newPrice, deviationBps);
     }

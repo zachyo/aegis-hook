@@ -97,12 +97,23 @@ contract DeployHook is Script {
             console2.log("Skipping pool init (set TOKEN0 and TOKEN1 env vars to initialize)");
         }
 
+        // ---------------------------------------------------------------------
+        // Step 4: Transfer ownership to Gnosis Safe (optional)
+        // ---------------------------------------------------------------------
+        address safeAddress = vm.envOr("SAFE_ADDRESS", address(0));
+        if (safeAddress != address(0)) {
+            hook.transferOwnership(safeAddress);
+            console2.log("Ownership transfer initiated to Safe:", safeAddress);
+            console2.log("  The Safe MUST call acceptOwnership() to finalize.");
+        }
+
         vm.stopBroadcast();
 
         // Log summary
         console2.log("\n=== Deployment Summary ===");
         console2.log("Hook:", address(hook));
         console2.log("Owner:", hook.owner());
+        console2.log("PendingOwner:", hook.pendingOwner());
         console2.log("PegPrice:", hook.pegPrice());
         console2.log("CurrentPrice:", hook.currentPrice());
     }

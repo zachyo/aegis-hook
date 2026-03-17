@@ -4,8 +4,21 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Deployers} from "v4-periphery/lib/v4-core/test/utils/Deployers.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
+import {PoolKey} from "v4-core/types/PoolKey.sol";
+import {Currency} from "v4-core/types/Currency.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {StablecoinPegGuardianHook} from "../src/StablecoinPegGuardianHook.sol";
 import {PegGuardianCallback} from "../src/reactive/PegGuardianCallback.sol";
+import {MockERC20} from "../src/mocks/MockERC20.sol";
+import {PoolSwapTest} from "v4-core/test/PoolSwapTest.sol";
+import {SwapParams} from "v4-core/types/PoolOperation.sol";
+import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
+
+contract MockRouter {
+    function swap(PoolKey memory, SwapParams memory, PoolSwapTest.TestSettings memory, bytes memory) external payable returns (BalanceDelta) {
+        return BalanceDelta.wrap(0);
+    }
+}
 
 /// @title PegGuardianCallbackTest
 /// @notice Tests for PegGuardianCallback + hook callback integration
@@ -28,7 +41,19 @@ contract PegGuardianCallbackTest is Test, Deployers {
         hook = StablecoinPegGuardianHook(hookAddress);
 
         // Deploy callback contract — reactiveSystem is the authorized sender
-        callback = new PegGuardianCallback(reactiveSystem, hookAddress);
+        MockERC20 token0 = new MockERC20("Token0", "T0", 18);
+        MockERC20 token1 = new MockERC20("Token1", "T1", 18);
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(address(token0)),
+            currency1: Currency.wrap(address(token1)),
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+            tickSpacing: 60,
+            hooks: hook
+        });
+        
+        MockRouter mockRouter = new MockRouter();
+        callback = new PegGuardianCallback(reactiveSystem, hookAddress, address(mockRouter), poolKey);
 
         // Authorize the callback contract on the hook
         hook.setAuthorizedCallback(address(callback));

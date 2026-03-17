@@ -1,6 +1,10 @@
 "use client";
 
-import { useReadContract, useReadContracts, useWatchContractEvent } from "wagmi";
+import {
+  useReadContract,
+  useReadContracts,
+  useWatchContractEvent,
+} from "wagmi";
 import { hookContract } from "@/lib/contracts";
 import { formatUnits } from "viem";
 import { useState, useCallback } from "react";
@@ -47,6 +51,8 @@ export function useHookState(): HookState {
       { ...hookContract, functionName: "owner" },
     ],
   });
+
+  console.log(data);
 
   const currentPrice = data?.[0]?.result as bigint | undefined;
   const pegPrice = data?.[1]?.result as bigint | undefined;
@@ -96,7 +102,15 @@ export function useRebalanceEvents(maxEvents = 20) {
     eventName: "RebalanceNeeded",
     onLogs: useCallback(
       (logs: unknown[]) => {
-        const newEvents = (logs as Array<{ args: { poolId: string; deviationBps: bigint; currentPrice: bigint } }>).map((log) => ({
+        const newEvents = (
+          logs as Array<{
+            args: {
+              poolId: string;
+              deviationBps: bigint;
+              currentPrice: bigint;
+            };
+          }>
+        ).map((log) => ({
           poolId: log.args.poolId,
           deviationBps: log.args.deviationBps,
           currentPrice: formatUnits(log.args.currentPrice, 18),
@@ -104,7 +118,7 @@ export function useRebalanceEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents]
+      [maxEvents],
     ),
   });
 
@@ -121,7 +135,16 @@ export function useSwapEvents(maxEvents = 20) {
     eventName: "SwapExecuted",
     onLogs: useCallback(
       (logs: unknown[]) => {
-        const newEvents = (logs as Array<{ args: { poolId: string; sender: string; fee: number; deviationBps: bigint } }>).map((log) => ({
+        const newEvents = (
+          logs as Array<{
+            args: {
+              poolId: string;
+              sender: string;
+              fee: number;
+              deviationBps: bigint;
+            };
+          }>
+        ).map((log) => ({
           poolId: log.args.poolId,
           sender: log.args.sender,
           fee: log.args.fee,
@@ -130,7 +153,7 @@ export function useSwapEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents]
+      [maxEvents],
     ),
   });
 

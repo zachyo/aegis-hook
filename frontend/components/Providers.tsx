@@ -15,9 +15,10 @@ const config = createConfig(
       [arbitrum.id]: http(),
       [optimism.id]: http(),
     },
-    walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
+    walletConnectProjectId:
+      process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
     appName: "Stablecoin Peg Guardian",
-  })
+  }),
 );
 
 const queryClient = new QueryClient();

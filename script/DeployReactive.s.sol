@@ -4,6 +4,12 @@ pragma solidity >=0.8.0;
 import {Script, console2} from "forge-std/Script.sol";
 import {PegMonitorReactive} from "../src/reactive/PegMonitorReactive.sol";
 import {PegGuardianCallback} from "../src/reactive/PegGuardianCallback.sol";
+import {PoolSwapTest} from "v4-core/test/PoolSwapTest.sol";
+import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {PoolKey} from "v4-core/types/PoolKey.sol";
+import {Currency} from "v4-core/types/Currency.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
+import {IHooks} from "v4-core/interfaces/IHooks.sol";
 
 /// @title Deploy Script for Reactive Cross-Chain Contracts
 /// @notice Two-step deployment:
@@ -40,13 +46,34 @@ contract DeployCallback is Script {
             );
         }
 
+        address token0 = vm.envAddress("TOKEN0");
+        address token1 = vm.envAddress("TOKEN1");
+        address poolManager = vm.envAddress("POOL_MANAGER");
+
         console2.log("=== PegGuardianCallback Deployment ===");
         console2.log("Hook address:", hookAddress);
         console2.log("Reactive system:", reactiveSystemAddress);
 
         vm.startBroadcast();
 
-        PegGuardianCallback callback = new PegGuardianCallback(reactiveSystemAddress, hookAddress);
+        // 1. Deploy test router for protective swaps
+        PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(poolManager));
+
+        // 2. Compute pool key
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+            tickSpacing: 60,
+            hooks: IHooks(hookAddress)
+        });
+
+        PegGuardianCallback callback = new PegGuardianCallback(
+            reactiveSystemAddress, 
+            hookAddress, 
+            address(swapRouter), 
+            poolKey
+        );
 
         console2.log("Callback deployed at:", address(callback));
         console2.log("\nNext: Set this as authorized callback on the hook:");

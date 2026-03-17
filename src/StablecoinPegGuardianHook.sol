@@ -11,6 +11,8 @@ import {BalanceDelta, BalanceDeltaLibrary} from "v4-core/types/BalanceDelta.sol"
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {SwapParams, ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
+import {IERC20Metadata} from "./interfaces/IERC20Metadata.sol";
+import {Currency} from "v4-core/types/Currency.sol";
 
 /// @title Stablecoin Peg Guardian Hook
 /// @notice A Uniswap v4 hook that protects stablecoin pools with dynamic fees,
@@ -267,6 +269,12 @@ contract StablecoinPegGuardianHook is BaseHook {
         whenNotPaused
         returns (bytes4, BeforeSwapDelta, uint24)
     {
+        // Auto-update price from Oracle before checking peg
+        if (address(chainlinkOracle) != address(0)) {
+            // Use low-level try/catch to ensure swap doesn't revert if oracle is down or stale
+            try this.updatePriceFromOracle() {} catch {}
+        }
+
         // Calculate peg deviation in basis points
         uint256 deviationBps = _calculateDeviationBps();
 
@@ -280,12 +288,9 @@ contract StablecoinPegGuardianHook is BaseHook {
             fee = uint24((deviationBps * MAX_FEE) / MAX_DEVIATION_BPS);
         }
 
-        // Segmented order flow: large-cap surcharge
-        uint256 swapAmount = params.amountSpecified < 0
-            ? uint256(-int256(params.amountSpecified))
-            : uint256(int256(params.amountSpecified));
+        uint256 normalizedSwapAmount = _normalizeSwapAmount(key, params);
 
-        if (swapAmount >= LARGECAP_THRESHOLD) {
+        if (normalizedSwapAmount >= LARGECAP_THRESHOLD) {
             fee += LARGECAP_SURCHARGE;
         }
 
@@ -462,5 +467,36 @@ contract StablecoinPegGuardianHook is BaseHook {
     /// @return deviationBps The current deviation from peg in basis points
     function getDeviationBps() external view returns (uint256) {
         return _calculateDeviationBps();
+    }
+
+    // =========================================================================
+    // Internal Helper Functions
+    // =========================================================================
+
+    /// @notice Normalizes swap amount to 18 decimals and returns the absolute value
+    function _normalizeSwapAmount(PoolKey calldata key, SwapParams calldata params) private view returns (uint256) {
+        uint256 swapAmount = params.amountSpecified < 0
+            ? uint256(-int256(params.amountSpecified))
+            : uint256(int256(params.amountSpecified));
+
+        bool isExactInput = params.amountSpecified < 0;
+        address specifiedCurrency;
+        if (isExactInput) {
+            specifiedCurrency = params.zeroForOne ? Currency.unwrap(key.currency0) : Currency.unwrap(key.currency1);
+        } else {
+            specifiedCurrency = params.zeroForOne ? Currency.unwrap(key.currency1) : Currency.unwrap(key.currency0);
+        }
+
+        uint8 tokenDecimals = 18;
+        try IERC20Metadata(specifiedCurrency).decimals() returns (uint8 d) {
+            tokenDecimals = d;
+        } catch {}
+
+        if (tokenDecimals < 18) {
+            return swapAmount * (10 ** (18 - tokenDecimals));
+        } else if (tokenDecimals > 18) {
+            return swapAmount / (10 ** (tokenDecimals - 18));
+        }
+        return swapAmount;
     }
 }
