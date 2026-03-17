@@ -51,12 +51,10 @@ contract PegGuardianCallback is AbstractCallback {
     /// @param _hookAddress Address of StablecoinPegGuardianHook on this destination chain
     /// @param _swapRouter Address of the PoolSwapTest router to execute protective swaps
     /// @param _poolKey The Uniswap v4 pool key to protect
-    constructor(
-        address _callbackSender, 
-        address _hookAddress,
-        address _swapRouter,
-        PoolKey memory _poolKey
-    ) payable AbstractCallback(_callbackSender) {
+    constructor(address _callbackSender, address _hookAddress, address _swapRouter, PoolKey memory _poolKey)
+        payable
+        AbstractCallback(_callbackSender)
+    {
         if (_hookAddress == address(0) || _swapRouter == address(0)) revert ZeroAddress();
         HOOK_ADDRESS = _hookAddress;
         SWAP_ROUTER = _swapRouter;
@@ -93,26 +91,24 @@ contract PegGuardianCallback is AbstractCallback {
         // If price fell, we assume the stablecoin lost value. If price rose, the stablecoin gained value.
         // For demonstration, we simply execute a small swap to rebalance.
         // Assuming Peg is 1e18, if newPrice < 1e18, we swap to buy the stablecoin.
-        
+
         bool zeroForOne = newPrice < 1e18; // simplistic logic to determine swap direction
         // Swap 100 units of the stronger token to buy back the depegged token
         uint256 swapAmount = 100;
 
-        PoolSwapTest(SWAP_ROUTER).swap(
-            poolKey,
-            SwapParams({
-                zeroForOne: zeroForOne,
-                // casting to 'int256' is safe because swapAmount is smaller than type(int256).max
-                // forge-lint: disable-next-line(unsafe-typecast)
-                amountSpecified: -int256(swapAmount),
-                sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
-            }),
-            PoolSwapTest.TestSettings({
-                takeClaims: false,
-                settleUsingBurn: false
-            }),
-            new bytes(0)
-        );
+        PoolSwapTest(SWAP_ROUTER)
+            .swap(
+                poolKey,
+                SwapParams({
+                    zeroForOne: zeroForOne,
+                    // casting to 'int256' is safe because swapAmount is smaller than type(int256).max
+                    // forge-lint: disable-next-line(unsafe-typecast)
+                    amountSpecified: -int256(swapAmount),
+                    sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+                }),
+                PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
+                new bytes(0)
+            );
 
         emit PegProtectionExecuted(HOOK_ADDRESS, newPrice, deviationBps);
     }

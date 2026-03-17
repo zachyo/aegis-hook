@@ -15,7 +15,11 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 
 contract MockRouter {
-    function swap(PoolKey memory, SwapParams memory, PoolSwapTest.TestSettings memory, bytes memory) external payable returns (BalanceDelta) {
+    function swap(PoolKey memory, SwapParams memory, PoolSwapTest.TestSettings memory, bytes memory)
+        external
+        payable
+        returns (BalanceDelta)
+    {
         return BalanceDelta.wrap(0);
     }
 }

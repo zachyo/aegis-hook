@@ -25,7 +25,7 @@ contract ExecuteSwap is Script {
         // 1. Deploy test routers
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(poolManager));
         PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(IPoolManager(poolManager));
-        
+
         address swapRouterAddress = address(swapRouter);
         address modifyLiquidityRouterAddress = address(modifyLiquidityRouter);
 
@@ -48,12 +48,7 @@ contract ExecuteSwap is Script {
         console2.log("Adding liquidity to the pool...");
         modifyLiquidityRouter.modifyLiquidity(
             poolKey,
-            ModifyLiquidityParams({
-                tickLower: -600,
-                tickUpper: 600,
-                liquidityDelta: 100_000 * 1e6,
-                salt: 0
-            }),
+            ModifyLiquidityParams({tickLower: -600, tickUpper: 600, liquidityDelta: 100_000 * 1e6, salt: 0}),
             new bytes(0)
         );
 
@@ -70,15 +65,12 @@ contract ExecuteSwap is Script {
                 amountSpecified: -int256(amountIn),
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
             }),
-            PoolSwapTest.TestSettings({
-                takeClaims: false,
-                settleUsingBurn: false
-            }),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             new bytes(0)
         );
 
         console2.log("Swap completed successfully!");
-        
+
         vm.stopBroadcast();
     }
 }

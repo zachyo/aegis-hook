@@ -15,12 +15,11 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 
 contract MockRouter {
-    function swap(
-        PoolKey memory,
-        SwapParams memory,
-        PoolSwapTest.TestSettings memory,
-        bytes memory
-    ) external payable returns (BalanceDelta) {
+    function swap(PoolKey memory, SwapParams memory, PoolSwapTest.TestSettings memory, bytes memory)
+        external
+        payable
+        returns (BalanceDelta)
+    {
         return BalanceDelta.wrap(0);
     }
 }
@@ -112,17 +111,11 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
     function setUp() public {
         deployFreshManagerAndRouters();
 
-        uint160 flags = uint160(
-            Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
-                Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         address hookAddress = address(flags);
         deployCodeTo(
-            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook",
-            abi.encode(manager, address(this)),
-            hookAddress
+            "StablecoinPegGuardianHook.sol:StablecoinPegGuardianHook", abi.encode(manager, address(this)), hookAddress
         );
         hook = StablecoinPegGuardianHook(hookAddress);
 
@@ -138,21 +131,11 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
             hooks: hook
         });
         MockRouter mockRouter = new MockRouter();
-        callback = new PegGuardianCallback(
-            reactiveSystem,
-            hookAddress,
-            address(mockRouter),
-            dummyKey
-        );
+        callback = new PegGuardianCallback(reactiveSystem, hookAddress, address(mockRouter), dummyKey);
         hook.setAuthorizedCallback(address(callback));
 
         // Deploy handler
-        handler = new HookHandler(
-            hook,
-            callback,
-            reactiveSystem,
-            address(this)
-        );
+        handler = new HookHandler(hook, callback, reactiveSystem, address(this));
 
         // Target only the handler for invariant testing
         targetContract(address(handler));
@@ -164,11 +147,7 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
 
     /// @notice currentPrice must always be greater than zero
     function invariant_priceAlwaysPositive() public view {
-        assertGt(
-            hook.currentPrice(),
-            0,
-            "INVARIANT VIOLATED: currentPrice is zero"
-        );
+        assertGt(hook.currentPrice(), 0, "INVARIANT VIOLATED: currentPrice is zero");
     }
 
     /// @notice pegPrice must always be greater than zero
@@ -178,18 +157,13 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
 
     /// @notice owner must never be the zero address
     function invariant_ownerNeverZero() public view {
-        assertTrue(
-            hook.owner() != address(0),
-            "INVARIANT VIOLATED: owner is zero address"
-        );
+        assertTrue(hook.owner() != address(0), "INVARIANT VIOLATED: owner is zero address");
     }
 
     /// @notice rebalanceCount must be monotonically non-decreasing
     function invariant_rebalanceCountMonotonic() public view {
         assertGe(
-            hook.rebalanceCount(),
-            handler.ghostPreviousRebalanceCount(),
-            "INVARIANT VIOLATED: rebalanceCount decreased"
+            hook.rebalanceCount(), handler.ghostPreviousRebalanceCount(), "INVARIANT VIOLATED: rebalanceCount decreased"
         );
     }
 
@@ -203,11 +177,7 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
         uint256 diff = current >= peg ? current - peg : peg - current;
         uint256 expectedDeviation = (diff * BPS_PRECISION) / peg;
 
-        assertEq(
-            reportedDeviation,
-            expectedDeviation,
-            "INVARIANT VIOLATED: deviation calculation inconsistent"
-        );
+        assertEq(reportedDeviation, expectedDeviation, "INVARIANT VIOLATED: deviation calculation inconsistent");
     }
 
     /// @notice The computed dynamic fee can never exceed MAX_LP_FEE
@@ -230,9 +200,6 @@ contract StablecoinPegGuardianHookInvariantTest is Test, Deployers {
             fee = uint24(LPFeeLibrary.MAX_LP_FEE);
         }
 
-        assertTrue(
-            fee <= uint24(LPFeeLibrary.MAX_LP_FEE),
-            "INVARIANT VIOLATED: fee exceeds MAX_LP_FEE"
-        );
+        assertTrue(fee <= uint24(LPFeeLibrary.MAX_LP_FEE), "INVARIANT VIOLATED: fee exceeds MAX_LP_FEE");
     }
 }

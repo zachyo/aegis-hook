@@ -68,12 +68,8 @@ contract DeployCallback is Script {
             hooks: IHooks(hookAddress)
         });
 
-        PegGuardianCallback callback = new PegGuardianCallback(
-            reactiveSystemAddress, 
-            hookAddress, 
-            address(swapRouter), 
-            poolKey
-        );
+        PegGuardianCallback callback =
+            new PegGuardianCallback(reactiveSystemAddress, hookAddress, address(swapRouter), poolKey);
 
         console2.log("Callback deployed at:", address(callback));
         console2.log("\nNext: Set this as authorized callback on the hook:");
