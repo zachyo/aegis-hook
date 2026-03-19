@@ -2,15 +2,23 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
-import { mainnet, sepolia, base, arbitrum, optimism } from "wagmi/chains";
+import {
+  mainnet,
+  sepolia,
+  base,
+  arbitrum,
+  optimism,
+  unichain,
+  unichainSepolia,
+} from "wagmi/chains";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 
 const config = createConfig(
   getDefaultConfig({
-    chains: [mainnet, sepolia, base, arbitrum, optimism],
+    chains: [sepolia],
     transports: {
       [mainnet.id]: http(),
-      [sepolia.id]: http(),
+      [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
       [base.id]: http(),
       [arbitrum.id]: http(),
       [optimism.id]: http(),
@@ -24,6 +32,7 @@ const config = createConfig(
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  console.log("RPC:", process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL);
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

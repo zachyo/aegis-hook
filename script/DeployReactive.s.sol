@@ -32,17 +32,15 @@ contract DeployCallback is Script {
     function run() external {
         address hookAddress = vm.envAddress("HOOK_ADDRESS");
 
-        // Reactive Network system address that will send callbacks
-        // On Kopli testnet, this is the Reactive system contract
-        address reactiveSystemAddress = vm.envOr("REACTIVE_SYSTEM_ADDRESS", address(0));
+        // Reactive Network Callback Proxy on Sepolia
+        // This is the address that actually relays cross-chain callbacks
+        address callbackProxyAddress = vm.envOr("CALLBACK_PROXY_ADDRESS", address(0));
 
         // If not set, use a placeholder — must be updated before production
-        if (reactiveSystemAddress == address(0)) {
-            // Default Reactive Network callback sender (Kopli)
-            // This gets replaced when PegMonitorReactive is deployed
-            reactiveSystemAddress = vm.envAddress("DEPLOYER");
+        if (callbackProxyAddress == address(0)) {
+            callbackProxyAddress = vm.envAddress("DEPLOYER");
             console2.log(
-                "WARNING: Using DEPLOYER as reactive system address. Update after deploying PegMonitorReactive."
+                "WARNING: Using DEPLOYER as callback proxy. Set CALLBACK_PROXY_ADDRESS from https://dev.reactive.network/origins-and-destinations"
             );
         }
 
@@ -52,7 +50,7 @@ contract DeployCallback is Script {
 
         console2.log("=== PegGuardianCallback Deployment ===");
         console2.log("Hook address:", hookAddress);
-        console2.log("Reactive system:", reactiveSystemAddress);
+        console2.log("Callback proxy:", callbackProxyAddress);
 
         vm.startBroadcast();
 
@@ -69,7 +67,7 @@ contract DeployCallback is Script {
         });
 
         PegGuardianCallback callback =
-            new PegGuardianCallback(reactiveSystemAddress, hookAddress, address(swapRouter), poolKey);
+            new PegGuardianCallback(callbackProxyAddress, hookAddress, address(swapRouter), poolKey);
 
         console2.log("Callback deployed at:", address(callback));
         console2.log("\nNext: Set this as authorized callback on the hook:");

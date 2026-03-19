@@ -106,7 +106,7 @@ export function useRebalanceEvents(maxEvents = 20) {
     async function fetchPastEvents() {
       try {
         const currentBlock = await publicClient!.getBlockNumber();
-        const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n;
+        const fromBlock = currentBlock > 900n ? currentBlock - 900n : 0n;
         const logs = await publicClient!.getContractEvents({
           address: HOOK_ADDRESS,
           abi: STABLECOIN_PEG_GUARDIAN_HOOK_ABI,
@@ -121,7 +121,7 @@ export function useRebalanceEvents(maxEvents = 20) {
             (log.args as { deviationBps?: bigint }).deviationBps ?? 0n,
           currentPrice: formatUnits(
             (log.args as { currentPrice?: bigint }).currentPrice ?? 0n,
-            18
+            18,
           ),
           timestamp: Number(log.blockNumber) * 1000, // approximate
         }));
@@ -134,10 +134,10 @@ export function useRebalanceEvents(maxEvents = 20) {
                   (x) =>
                     x.poolId === e.poolId &&
                     x.deviationBps === e.deviationBps &&
-                    x.timestamp === e.timestamp
-                ) === i
+                    x.timestamp === e.timestamp,
+                ) === i,
             )
-            .slice(0, maxEvents)
+            .slice(0, maxEvents),
         );
       } catch (err) {
         console.error("Failed to fetch past RebalanceNeeded events:", err);
@@ -169,7 +169,7 @@ export function useRebalanceEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents]
+      [maxEvents],
     ),
   });
 
@@ -189,7 +189,7 @@ export function useSwapEvents(maxEvents = 20) {
     async function fetchPastEvents() {
       try {
         const currentBlock = await publicClient!.getBlockNumber();
-        const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n;
+        const fromBlock = currentBlock > 900n ? currentBlock - 900n : 0n;
         const logs = await publicClient!.getContractEvents({
           address: HOOK_ADDRESS,
           abi: STABLECOIN_PEG_GUARDIAN_HOOK_ABI,
@@ -197,6 +197,7 @@ export function useSwapEvents(maxEvents = 20) {
           fromBlock,
           toBlock: "latest",
         });
+        console.log("SwapExecuted events:", logs);
 
         const pastEvents: SwapEvent[] = logs.map((log) => ({
           poolId: (log.args as { poolId?: string }).poolId ?? "",
@@ -215,10 +216,10 @@ export function useSwapEvents(maxEvents = 20) {
                   (x) =>
                     x.poolId === e.poolId &&
                     x.sender === e.sender &&
-                    x.timestamp === e.timestamp
-                ) === i
+                    x.timestamp === e.timestamp,
+                ) === i,
             )
-            .slice(0, maxEvents)
+            .slice(0, maxEvents),
         );
       } catch (err) {
         console.error("Failed to fetch past SwapExecuted events:", err);
@@ -252,7 +253,7 @@ export function useSwapEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents]
+      [maxEvents],
     ),
   });
 

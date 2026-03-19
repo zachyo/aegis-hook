@@ -24,14 +24,22 @@ contract ExecuteSwap is Script {
 
         // 1. Deploy test routers
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(poolManager));
-        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(IPoolManager(poolManager));
+        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(
+                IPoolManager(poolManager)
+            );
 
         address swapRouterAddress = address(swapRouter);
         address modifyLiquidityRouterAddress = address(modifyLiquidityRouter);
 
         // 1. Approve routers to spend tokens
-        MockERC20(token0).approve(modifyLiquidityRouterAddress, type(uint256).max);
-        MockERC20(token1).approve(modifyLiquidityRouterAddress, type(uint256).max);
+        MockERC20(token0).approve(
+            modifyLiquidityRouterAddress,
+            type(uint256).max
+        );
+        MockERC20(token1).approve(
+            modifyLiquidityRouterAddress,
+            type(uint256).max
+        );
         MockERC20(token0).approve(swapRouterAddress, type(uint256).max);
         MockERC20(token1).approve(swapRouterAddress, type(uint256).max);
 
@@ -45,12 +53,12 @@ contract ExecuteSwap is Script {
 
         // 2. Add Liquidity
         // Adding liquidity across a wide range (-600 to +600 ticks)
-        console2.log("Adding liquidity to the pool...");
-        modifyLiquidityRouter.modifyLiquidity(
-            poolKey,
-            ModifyLiquidityParams({tickLower: -600, tickUpper: 600, liquidityDelta: 100_000 * 1e6, salt: 0}),
-            new bytes(0)
-        );
+        // console2.log("Adding liquidity to the pool...");
+        // modifyLiquidityRouter.modifyLiquidity(
+        //     poolKey,
+        //     ModifyLiquidityParams({tickLower: -600, tickUpper: 600, liquidityDelta: 100_000 * 1e6, salt: 0}),
+        //     new bytes(0)
+        // );
 
         // 3. Execute a swap
         console2.log("Executing swap: 100 wei of TOKEN1 for TOKEN0");
@@ -65,7 +73,10 @@ contract ExecuteSwap is Script {
                 amountSpecified: -int256(amountIn),
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
             }),
-            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
+            PoolSwapTest.TestSettings({
+                takeClaims: false,
+                settleUsingBurn: false
+            }),
             new bytes(0)
         );
 

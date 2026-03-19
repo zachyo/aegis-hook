@@ -189,28 +189,39 @@ export default function Home() {
                     </td>
                   </tr>
                 )}
-                {rebalanceEvents.map((evt, i) => (
-                  <tr key={`rebalance-${i}`}>
-                    <td className="px-6 py-4 font-medium">Rebalance Needed</td>
-                    <td className="px-6 py-4">{formatBps(evt.deviationBps)}</td>
-                    <td className="px-6 py-4">Price: {evt.currentPrice}</td>
-                    <td className="px-6 py-4 text-right text-muted-foreground">
-                      {new Date(evt.timestamp).toLocaleTimeString()}
-                    </td>
-                  </tr>
-                ))}
-                {swapEvents.map((evt, i) => (
-                  <tr key={`swap-${i}`}>
-                    <td className="px-6 py-4 font-medium">Swap Executed</td>
-                    <td className="px-6 py-4">{formatBps(evt.deviationBps)}</td>
-                    <td className="px-6 py-4">
-                      Fee: {evt.fee} · {shortenAddress(evt.sender)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-muted-foreground">
-                      {new Date(evt.timestamp).toLocaleTimeString()}
-                    </td>
-                  </tr>
-                ))}
+                {[
+                  ...rebalanceEvents.map((evt) => ({
+                    type: "rebalance" as const,
+                    deviationBps: evt.deviationBps,
+                    detail: `Price: ${evt.currentPrice}`,
+                    timestamp: evt.timestamp,
+                  })),
+                  ...swapEvents.map((evt) => ({
+                    type: "swap" as const,
+                    deviationBps: evt.deviationBps,
+                    detail: `Fee: ${evt.fee} · ${shortenAddress(evt.sender)}`,
+                    timestamp: evt.timestamp,
+                  })),
+                ]
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .map((evt, i) => (
+                    <tr key={`${evt.type}-${i}`}>
+                      <td className="px-6 py-4 font-medium">
+                        {evt.type === "rebalance" ? (
+                          <span className="text-rose-500">⚠ Rebalance Needed</span>
+                        ) : (
+                          <span className="text-emerald-500">↔ Swap Executed</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {formatBps(evt.deviationBps)}
+                      </td>
+                      <td className="px-6 py-4">{evt.detail}</td>
+                      <td className="px-6 py-4 text-right text-muted-foreground">
+                        {new Date(evt.timestamp).toLocaleTimeString()}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
