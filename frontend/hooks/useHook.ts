@@ -4,10 +4,13 @@ import {
   useReadContract,
   useReadContracts,
   useWatchContractEvent,
+  usePublicClient,
 } from "wagmi";
 import { hookContract } from "@/lib/contracts";
-import { formatUnits } from "viem";
-import { useState, useCallback } from "react";
+import { formatUnits, type Log } from "viem";
+import { useState, useCallback, useEffect } from "react";
+import { STABLECOIN_PEG_GUARDIAN_HOOK_ABI } from "@/lib/abi/StablecoinPegGuardianHook";
+import { HOOK_ADDRESS } from "@/lib/contracts";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -52,8 +55,6 @@ export function useHookState(): HookState {
     ],
   });
 
-  console.log(data);
-
   const currentPrice = data?.[0]?.result as bigint | undefined;
   const pegPrice = data?.[1]?.result as bigint | undefined;
   const deviationBps = data?.[2]?.result as bigint | undefined;
@@ -92,11 +93,61 @@ export function useRebalanceCount() {
   });
 }
 
-// ── useRebalanceEvents: Watch for RebalanceNeeded events ──────────────
+// ── useRebalanceEvents: Fetch past + watch for new RebalanceNeeded ────
 
 export function useRebalanceEvents(maxEvents = 20) {
   const [events, setEvents] = useState<RebalanceEvent[]>([]);
+  const publicClient = usePublicClient();
 
+  // Fetch historical events on mount
+  useEffect(() => {
+    if (!publicClient) return;
+
+    async function fetchPastEvents() {
+      try {
+        const currentBlock = await publicClient!.getBlockNumber();
+        const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n;
+        const logs = await publicClient!.getContractEvents({
+          address: HOOK_ADDRESS,
+          abi: STABLECOIN_PEG_GUARDIAN_HOOK_ABI,
+          eventName: "RebalanceNeeded",
+          fromBlock,
+          toBlock: "latest",
+        });
+
+        const pastEvents: RebalanceEvent[] = logs.map((log) => ({
+          poolId: (log.args as { poolId?: string }).poolId ?? "",
+          deviationBps:
+            (log.args as { deviationBps?: bigint }).deviationBps ?? 0n,
+          currentPrice: formatUnits(
+            (log.args as { currentPrice?: bigint }).currentPrice ?? 0n,
+            18
+          ),
+          timestamp: Number(log.blockNumber) * 1000, // approximate
+        }));
+
+        setEvents((prev) =>
+          [...pastEvents, ...prev]
+            .filter(
+              (e, i, arr) =>
+                arr.findIndex(
+                  (x) =>
+                    x.poolId === e.poolId &&
+                    x.deviationBps === e.deviationBps &&
+                    x.timestamp === e.timestamp
+                ) === i
+            )
+            .slice(0, maxEvents)
+        );
+      } catch (err) {
+        console.error("Failed to fetch past RebalanceNeeded events:", err);
+      }
+    }
+
+    fetchPastEvents();
+  }, [publicClient, maxEvents]);
+
+  // Watch for new real-time events
   useWatchContractEvent({
     ...hookContract,
     eventName: "RebalanceNeeded",
@@ -118,18 +169,66 @@ export function useRebalanceEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents],
+      [maxEvents]
     ),
   });
 
   return events;
 }
 
-// ── useSwapEvents: Watch for SwapExecuted events ──────────────────────
+// ── useSwapEvents: Fetch past + watch for new SwapExecuted ────────────
 
 export function useSwapEvents(maxEvents = 20) {
   const [events, setEvents] = useState<SwapEvent[]>([]);
+  const publicClient = usePublicClient();
 
+  // Fetch historical events on mount
+  useEffect(() => {
+    if (!publicClient) return;
+
+    async function fetchPastEvents() {
+      try {
+        const currentBlock = await publicClient!.getBlockNumber();
+        const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n;
+        const logs = await publicClient!.getContractEvents({
+          address: HOOK_ADDRESS,
+          abi: STABLECOIN_PEG_GUARDIAN_HOOK_ABI,
+          eventName: "SwapExecuted",
+          fromBlock,
+          toBlock: "latest",
+        });
+
+        const pastEvents: SwapEvent[] = logs.map((log) => ({
+          poolId: (log.args as { poolId?: string }).poolId ?? "",
+          sender: (log.args as { sender?: string }).sender ?? "",
+          fee: Number((log.args as { fee?: number }).fee ?? 0),
+          deviationBps:
+            (log.args as { deviationBps?: bigint }).deviationBps ?? 0n,
+          timestamp: Number(log.blockNumber) * 1000,
+        }));
+
+        setEvents((prev) =>
+          [...pastEvents, ...prev]
+            .filter(
+              (e, i, arr) =>
+                arr.findIndex(
+                  (x) =>
+                    x.poolId === e.poolId &&
+                    x.sender === e.sender &&
+                    x.timestamp === e.timestamp
+                ) === i
+            )
+            .slice(0, maxEvents)
+        );
+      } catch (err) {
+        console.error("Failed to fetch past SwapExecuted events:", err);
+      }
+    }
+
+    fetchPastEvents();
+  }, [publicClient, maxEvents]);
+
+  // Watch for new real-time events
   useWatchContractEvent({
     ...hookContract,
     eventName: "SwapExecuted",
@@ -153,7 +252,7 @@ export function useSwapEvents(maxEvents = 20) {
         }));
         setEvents((prev) => [...newEvents, ...prev].slice(0, maxEvents));
       },
-      [maxEvents],
+      [maxEvents]
     ),
   });
 

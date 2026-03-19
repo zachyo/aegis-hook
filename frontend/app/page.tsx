@@ -59,7 +59,7 @@ export default function Home() {
     address &&
     state.owner !== "—" &&
     address.toLowerCase() === state.owner.toLowerCase();
-  console.log({ state });
+  console.log({ state, rebalanceEvents, swapEvents });
 
   return (
     <div className="min-h-screen flex flex-col items-center p-8 sm:p-20 font-sans">
