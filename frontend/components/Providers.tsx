@@ -32,7 +32,6 @@ const config = createConfig(
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  console.log("RPC:", process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL);
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

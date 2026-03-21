@@ -24,22 +24,14 @@ contract ExecuteSwap is Script {
 
         // 1. Deploy test routers
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(poolManager));
-        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(
-                IPoolManager(poolManager)
-            );
+        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(IPoolManager(poolManager));
 
         address swapRouterAddress = address(swapRouter);
         address modifyLiquidityRouterAddress = address(modifyLiquidityRouter);
 
         // 1. Approve routers to spend tokens
-        MockERC20(token0).approve(
-            modifyLiquidityRouterAddress,
-            type(uint256).max
-        );
-        MockERC20(token1).approve(
-            modifyLiquidityRouterAddress,
-            type(uint256).max
-        );
+        MockERC20(token0).approve(modifyLiquidityRouterAddress, type(uint256).max);
+        MockERC20(token1).approve(modifyLiquidityRouterAddress, type(uint256).max);
         MockERC20(token0).approve(swapRouterAddress, type(uint256).max);
         MockERC20(token1).approve(swapRouterAddress, type(uint256).max);
 
@@ -73,10 +65,7 @@ contract ExecuteSwap is Script {
                 amountSpecified: -int256(amountIn),
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
             }),
-            PoolSwapTest.TestSettings({
-                takeClaims: false,
-                settleUsingBurn: false
-            }),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             new bytes(0)
         );
 

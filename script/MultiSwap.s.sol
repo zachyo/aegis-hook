@@ -38,8 +38,7 @@ contract MultiSwap is Script {
         // 1. Deploy fresh test routers
         // =====================================================================
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(poolManager));
-        PoolModifyLiquidityTest modifyLiquidityRouter =
-            new PoolModifyLiquidityTest(IPoolManager(poolManager));
+        PoolModifyLiquidityTest modifyLiquidityRouter = new PoolModifyLiquidityTest(IPoolManager(poolManager));
 
         console2.log("=== Multi-Swap Test ===");
         console2.log("SwapRouter:", address(swapRouter));
@@ -67,12 +66,7 @@ contract MultiSwap is Script {
         console2.log("\n--- Adding Liquidity ---");
         modifyLiquidityRouter.modifyLiquidity(
             poolKey,
-            ModifyLiquidityParams({
-                tickLower: -600,
-                tickUpper: 600,
-                liquidityDelta: 100_000 * 1e6,
-                salt: 0
-            }),
+            ModifyLiquidityParams({tickLower: -600, tickUpper: 600, liquidityDelta: 100_000 * 1e6, salt: 0}),
             new bytes(0)
         );
         console2.log("Added 100k units of liquidity");
@@ -148,12 +142,7 @@ contract MultiSwap is Script {
         vm.stopBroadcast();
     }
 
-    function _doSwap(
-        PoolSwapTest swapRouter,
-        PoolKey memory poolKey,
-        bool zeroForOne,
-        uint256 amountIn
-    ) internal {
+    function _doSwap(PoolSwapTest swapRouter, PoolKey memory poolKey, bool zeroForOne, uint256 amountIn) internal {
         swapRouter.swap(
             poolKey,
             SwapParams({
@@ -161,23 +150,15 @@ contract MultiSwap is Script {
                 // casting to 'int256' is safe because amountIn is always small test values
                 // forge-lint: disable-next-line(unsafe-typecast)
                 amountSpecified: -int256(amountIn),
-                sqrtPriceLimitX96: zeroForOne
-                    ? TickMath.MIN_SQRT_PRICE + 1
-                    : TickMath.MAX_SQRT_PRICE - 1
+                sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
             }),
-            PoolSwapTest.TestSettings({
-                takeClaims: false,
-                settleUsingBurn: false
-            }),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             new bytes(0)
         );
         console2.log("  Swap executed successfully");
     }
 
-    function _logState(
-        StablecoinPegGuardianHook hook,
-        string memory label
-    ) internal view {
+    function _logState(StablecoinPegGuardianHook hook, string memory label) internal view {
         console2.log(string.concat("  [", label, "]"));
         console2.log("    CurrentPrice:", hook.currentPrice());
         console2.log("    DeviationBps:", hook.getDeviationBps());

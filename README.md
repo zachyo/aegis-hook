@@ -3,6 +3,7 @@
 A production-grade Uniswap v4 hook that protects stablecoin pools (USDC, USDT, DAI, etc.) through dynamic fees, auto-rebalancing, segmented order flow, and Reactive Network cross-chain peg protection. Built for the UHI8 Hookathon and the Reactive Network sponsor prize track.
 
 ## Core Features
+
 - **Dynamic Fees**: Adjusts fees from 0–100 bps based on peg deviation via `beforeSwap`. Overrides LP fees dynamically using `OVERRIDE_FEE_FLAG`.
 - **Auto-Rebalancing Detection**: Checks after every swap (`afterSwap`) if deviation exceeds 50 bps. If so, emits a `RebalanceNeeded` event to trigger cross-chain rebalancing.
 - **Segmented Order Flow**: Automatically targets large retail/institutional orders (≥$100k) with an additional 20 bps surcharge to suppress volatility. Normalizes token decimals (6, 8, 18) for accurate threshold comparisons.
@@ -40,21 +41,23 @@ graph TB
 ## Partner Integrations
 
 ### Reactive Network
+
 Cross-chain peg protection using Reactive Smart Contracts (RSCs). The Reactive Network monitors events on the origin chain and triggers callbacks on destination chains.
 
-| Component | File | Description |
-|-----------|------|-------------|
-| Reactive Monitor | [`src/reactive/PegMonitorReactive.sol`](src/reactive/PegMonitorReactive.sol) | Deployed on Reactive Network (Lasna testnet). Subscribes to `RebalanceNeeded` events emitted by the hook and triggers cross-chain callbacks. |
-| Callback Contract | [`src/reactive/PegGuardianCallback.sol`](src/reactive/PegGuardianCallback.sol) | Deployed on the destination chain (Sepolia). Receives callbacks from PegMonitorReactive, updates the hook's price, and executes a protective swap. |
-| Interface | [`src/interfaces/IReactivePegGuardian.sol`](src/interfaces/IReactivePegGuardian.sol) | Shared interface defining the events and callback signatures used across chains. |
+| Component         | File                                                                                 | Description                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reactive Monitor  | [`src/reactive/PegMonitorReactive.sol`](src/reactive/PegMonitorReactive.sol)         | Deployed on Reactive Network (Lasna testnet). Subscribes to `RebalanceNeeded` events emitted by the hook and triggers cross-chain callbacks.       |
+| Callback Contract | [`src/reactive/PegGuardianCallback.sol`](src/reactive/PegGuardianCallback.sol)       | Deployed on the destination chain (Sepolia). Receives callbacks from PegMonitorReactive, updates the hook's price, and executes a protective swap. |
+| Interface         | [`src/interfaces/IReactivePegGuardian.sol`](src/interfaces/IReactivePegGuardian.sol) | Shared interface defining the events and callback signatures used across chains.                                                                   |
 
 ### Chainlink (Oracle)
+
 Price feed integration for real-time peg deviation monitoring.
 
-| Component | File | Description |
-|-----------|------|-------------|
+| Component          | File                                                                                     | Description                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Oracle Integration | [`src/StablecoinPegGuardianHook.sol`](src/StablecoinPegGuardianHook.sol) (lines 415–470) | `updatePriceFromOracle()` fetches Chainlink price data, normalizes to 18 decimals, and updates the hook's internal price. Auto-called in `_beforeSwap`. |
-| Oracle Interface | [`src/interfaces/AggregatorV3Interface.sol`](src/interfaces/AggregatorV3Interface.sol) | Standard Chainlink `AggregatorV3Interface` for `latestRoundData()`. |
+| Oracle Interface   | [`src/interfaces/AggregatorV3Interface.sol`](src/interfaces/AggregatorV3Interface.sol)   | Standard Chainlink `AggregatorV3Interface` for `latestRoundData()`.                                                                                     |
 
 ## Project Structure
 
@@ -85,19 +88,20 @@ script/
 ├── DeployReactive.s.sol    # Callback + Reactive monitor deploy
 ├── DeployTokens.s.sol      # Mock token deployment
 ├── ExecuteSwap.s.sol       # Test swap execution
-└── HookMiner.sol           # CREATE2 salt miner for flag-encoded addresses
+├── HookMiner.sol           # CREATE2 salt miner for flag-encoded addresses
+└── MultiSwap.s.sol         # Multi-swap execution
 
 frontend/                   # Next.js dashboard (peg status, fees, admin panel)
 ```
 
 ## Testnet Deployments
 
-| Contract | Network | Address |
-|----------|---------|---------|
-| StablecoinPegGuardianHook | Sepolia | `0x67F3Bd11b7f80Dc867B60CB06a89f478F0f8C8c0` |
-| PegGuardianCallback | Sepolia | `0xC35528AF7B27C9537F090cC6027149d047B9c586` |
-| PegMonitorReactive | Lasna (Reactive) | `0x2e601349b30cCD0347B4cca470e61bAC453C538d` |
-| Chainlink USDC/USD Feed | Sepolia | `0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E` |
+| Contract                  | Network          | Address                                      |
+| ------------------------- | ---------------- | -------------------------------------------- |
+| StablecoinPegGuardianHook | Sepolia          | `0x8F609e1427A9601224A41DC819E527fdc59c48C0` |
+| PegGuardianCallback       | Sepolia          | `0x03e36A1Eb31072e3876e801b02c93c4ac7722FD5` |
+| PegMonitorReactive        | Lasna (Reactive) | `0xFeAD233C36F0979668a5e89e38dd0Fc542A7c767` |
+| Chainlink USDC/USD Feed   | Sepolia          | `0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E` |
 
 ## Foundry Usage
 
@@ -110,6 +114,7 @@ forge build
 ### Test
 
 Unit, fuzz, invariant, and gas tests cover deviation math, fee bounds, admin functions, oracle integration, and callback flows.
+
 ```shell
 forge test
 ```
